@@ -27,3 +27,10 @@ train(config)
 ```bash
 python -m pikan.train   # 또는 python pikan/train.py
 ```
+
+## VSCode에서 실행하기
+
+레포지토리 루트에는 VSCode용 `launch.json`이 포함되어 있습니다. VSCode에서
+프로젝트 폴더를 열고 F5(또는 "실행" 버튼)을 누르면 `pikan.train` 모듈이 자동으로
+실행됩니다. 데이터 경로 등 파라미터는 `launch.json`이나 커맨드 라인 인수로
+수정할 수 있습니다.
