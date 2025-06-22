@@ -8,7 +8,7 @@ from tqdm import tqdm
 
 from src.data_loader.datasets import InterferometryDataset
 from src.model.pikans import PIKANs
-from src.loss.physics_informed_loss import PhysicsLoss
+from src.loss.physics_informed_loss import RobustPhysicsLoss
 
 def train(config):
     """
@@ -59,7 +59,7 @@ def train(config):
     # 3. Loss Function and Optimizer
     print("\n3. Setting up loss function and optimizer...")
     criterion_mse = torch.nn.MSELoss()
-    criterion_physics = PhysicsLoss(
+    criterion_physics = RobustPhysicsLoss(
         wavelengths=torch.tensor(config['model']['wavelengths'], device=device)
     )
     optimizer = torch.optim.Adam(model.parameters(), lr=config['training']['learning_rate'])
