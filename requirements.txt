@@ -1,0 +1,9 @@
+torch
+torchvision
+torchaudio
+numpy
+opencv-python-headless
+pyyaml
+matplotlib
+scikit-image
+tqdm

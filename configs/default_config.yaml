@@ -1,0 +1,31 @@
+# PIKANs Project Default Configuration
+
+# Data settings
+data:
+  path: "data/raw/benchmark"
+  gt_path: "data/raw/benchmark_gt"
+  roi: [0, 0, 256, 256] # [x, y, width, height]
+  normalization: "minmax" # or "standard"
+
+# Model settings
+model:
+  name: "PIKANs"
+  kan_layers: [12, 64, 64, 1] # Input (12 intensities) -> Hidden -> Output (1 height)
+  grid_size: 5
+  spline_order: 3
+
+# Training settings
+training:
+  epochs: 100
+  batch_size: 1024
+  learning_rate: 0.001
+  optimizer: "Adam"
+  scheduler: "StepLR"
+  loss_weights:
+    mse: 1.0
+    physics: 0.1 # Weight for the physics-informed loss
+
+# Output settings
+output:
+  log_dir: "outputs/logs"
+  model_dir: "outputs/models"

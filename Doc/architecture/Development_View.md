@@ -11,7 +11,8 @@
 
 - **PIKANs 네트워크**
   - PyTorch 등 DL 프레임워크 기반
-  - Custom KAN 레이어, Physics-Informed 손실함수 직접 구현
+  - **Custom KAN 레이어**: B-spline 기반으로 구현 완료 (`src/model/layers.py`)
+  - **Physics-Informed 손실함수**: 프레임워크는 구현되었으나, 현재는 실제 물리식을 반영하지 않은 플레이스홀더 상태 (`src/loss/physics_informed_loss.py`)
 
 - **Config 및 파라미터 관리**
   - 실험 단위 파라미터화, 재현성 확보

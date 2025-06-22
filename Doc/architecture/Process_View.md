@@ -6,7 +6,7 @@
 2. **전처리** (정규화, ROI, 필터링 등)
 3. **특징 추출/벡터화**
 4. **PIKANs 입력/추론**
-5. **Physics-Informed loss 계산 및 역전파**
+5. **Loss 계산 및 역전파**: MSE Loss와 Physics-Informed Loss를 결합하여 역전파 수행. (현재 Physics-Informed Loss는 플레이스홀더)
 6. **Height map 복원 및 저장/시각화**
 
 ## 병렬 처리 및 확장성
