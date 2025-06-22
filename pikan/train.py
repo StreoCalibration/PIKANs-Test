@@ -2,10 +2,11 @@ from pathlib import Path
 from torch.utils.data import DataLoader
 import torch
 
-from .dataset import InterferogramDataset
-from .preprocessing import normalize_intensity
-from .model import PIKANsNetwork, physics_informed_loss
-from .config import TrainConfig
+# 절대 임포트를 사용해 스크립트 단독 실행 시에도 패키지가 정상 인식되도록 한다.
+from pikan.dataset import InterferogramDataset
+from pikan.preprocessing import normalize_intensity
+from pikan.model import PIKANsNetwork, physics_informed_loss
+from pikan.config import TrainConfig
 
 
 def load_dataset(data_dir: Path) -> InterferogramDataset:

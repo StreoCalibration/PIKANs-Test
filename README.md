@@ -21,3 +21,9 @@ from pikan.train import train
 config = TrainConfig(data_dir=Path("./data"))
 train(config)
 ```
+
+패키지를 모듈로 실행하면 상대 임포트 문제가 발생하지 않습니다.
+
+```bash
+python -m pikan.train   # 또는 python pikan/train.py
+```
