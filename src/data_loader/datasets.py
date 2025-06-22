@@ -103,13 +103,46 @@ class InterferometryDataset(Dataset):
         height = self.pixel_heights[idx]
         return torch.from_numpy(intensity_vector).float(), torch.from_numpy(height).float()
 
-def load_inference_data(data_path):
+def load_inference_data(data_path, normalization_method='minmax', roi=None):
     """
     Loads and preprocesses data for a single inference run.
     This function is for predicting a full height map, not for training.
     """
     print(f"Loading inference data from {data_path}")
-    # TODO: Implement data loading for prediction
-    # This will likely involve loading 12 images, normalizing,
-    # and stacking them into a tensor of shape (H*W, 12).
-    return None # Placeholder
+    if not os.path.isdir(data_path):
+        raise FileNotFoundError(f"Data directory not found: {data_path}")
+
+    intensities = []
+    original_shape = None
+
+    for w in range(1, 4):  # Wavelengths 1, 2, 3
+        for b in range(1, 5):  # Buckets 1, 2, 3, 4
+            img_path = os.path.join(data_path, f"L{w}_I{b}.png")
+            if not os.path.exists(img_path):
+                raise FileNotFoundError(f"Required image file not found: {img_path}")
+
+            img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
+            if img is None:
+                raise IOError(f"Could not read image: {img_path}")
+
+            if original_shape is None:
+                original_shape = img.shape
+            elif original_shape != img.shape:
+                raise ValueError("All intensity images must have the same dimensions.")
+
+            intensities.append(img)
+
+    # Preprocessing
+    if roi:
+        intensities = [select_roi(img, roi) for img in intensities]
+        # Update shape after ROI
+        original_shape = intensities[0].shape
+
+    if normalization_method:
+        intensities = [normalize_intensity(img.astype(np.float32), normalization_method) for img in intensities]
+
+    # Stack and vectorize
+    intensity_stack = np.stack(intensities, axis=-1)  # (H, W, 12)
+    intensity_vectors = intensity_stack.reshape(-1, 12)
+
+    return torch.from_numpy(intensity_vectors).float(), original_shape

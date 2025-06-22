@@ -30,5 +30,5 @@ python train.py --config configs/default_config.yaml
 ### 추론
 
 ```bash
-python predict.py --model_path outputs/models/best_model.pth --data_path data/raw/sample
+python predict.py --model_path outputs/models/20250622_203136/final_model.pth --data_path data/raw/benchmark/sample_005
 ```
