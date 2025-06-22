@@ -16,7 +16,7 @@
 
 4. **PIKANs 네트워크 모듈**
    - **KAN 기반 신경망**: B-spline을 활성화 함수로 사용하는 `KANLayer`를 여러 층으로 쌓아 구성 (`src/model/layers.py`, `src/model/pikans.py`)
-   - **Physics-Informed Loss**: MSE Loss와 물리 제약 조건 기반 Loss를 결합하는 구조. 현재 물리 Loss는 플레이스홀더로 구현됨.
+   - **Physics-Informed Loss**: MSE Loss와 물리 제약 조건(I = A + B*cos(phi)) 기반 Loss를 결합하는 구조로 구현 완료.
 
 5. **후처리/시각화**
    - Height map 생성

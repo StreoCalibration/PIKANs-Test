@@ -3,8 +3,8 @@
 ## 시나리오 1: 벤치마크 데이터 기반 학습 및 검증
 
 1. 벤치마크 3파장 4-bucket 이미지 준비
-2. 전처리/ROI/정규화 수행 (`src/data_loader/datasets.py`)
-3. PIKANs 네트워크 학습 (현재 Physics-Informed loss는 플레이스홀더로 동작)
+2. 전처리/ROI/정규화 수행 (`src/data_loader/datasets.py`).
+3. PIKANs 네트워크 학습 (물리식을 반영한 Physics-Informed loss 적용).
 4. Height map 예측, GT와 비교 평가
 
 ## 시나리오 2: 실제 AOI 계측 데이터 복원

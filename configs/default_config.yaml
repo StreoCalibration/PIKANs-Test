@@ -13,6 +13,7 @@ model:
   kan_layers: [12, 64, 64, 1] # Input (12 intensities) -> Hidden -> Output (1 height)
   grid_size: 5
   spline_order: 3
+  wavelengths: [633.0, 532.0, 450.0] # nm, for PhysicsLoss
 
 # Training settings
 training:
