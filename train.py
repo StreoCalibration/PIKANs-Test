@@ -35,15 +35,15 @@ def train(config):
     data_conf = config['data']
     train_dataset = InterferometryDataset(
         data_dir=data_conf['path'],
-        gt_dir=data_conf['gt_path'],
-        roi=data_conf['roi'],
+        data_layout=data_conf['layout'],
+        roi=data_conf.get('roi'),
         normalization_method=data_conf['normalization']
     )
     train_loader = DataLoader(
         train_dataset,
         batch_size=config['training']['batch_size'],
         shuffle=True,
-        num_workers=4, # Adjust based on your system
+        num_workers=data_conf.get('num_workers', 4),
         pin_memory=True
     )
 
@@ -65,8 +65,12 @@ def train(config):
     optimizer = torch.optim.Adam(model.parameters(), lr=config['training']['learning_rate'])
     
     # Optional: Learning rate scheduler
-    if config['training']['scheduler'] == 'StepLR':
-        scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=30, gamma=0.1)
+    scheduler_conf = config['training'].get('scheduler')
+    if scheduler_conf and scheduler_conf.get('type') == 'StepLR':
+        scheduler = torch.optim.lr_scheduler.StepLR(
+            optimizer, 
+            step_size=scheduler_conf.get('step_size', 30), 
+            gamma=scheduler_conf.get('gamma', 0.1))
     else:
         scheduler = None
 
@@ -118,7 +122,7 @@ if __name__ == "__main__":
     parser.add_argument('--config', type=str, required=True, help="Path to the configuration file.")
     args = parser.parse_args()
 
-    with open(args.config, 'r') as f:
+    with open(args.config, 'r', encoding='utf-8') as f:
         config = yaml.safe_load(f)
 
     train(config)

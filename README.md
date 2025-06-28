@@ -24,7 +24,7 @@ pip install -r requirements.txt
 ### 학습
 
 ```bash
-python train.py --config configs/default_config.yaml
+python train.py --config configs/4w3b_config.yaml
 ```
 
 ### 추론

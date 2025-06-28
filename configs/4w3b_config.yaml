@@ -1,0 +1,33 @@
+# Configuration for 4-wavelength, 3-bucket data
+data:
+  path: "data/4w3b_benchmark"
+  # layout 섹션을 통해 데이터 구조를 정의합니다.
+  layout:
+    num_wavelengths: 4
+    num_buckets: 3
+    file_pattern: "w{w_idx}_b{b_idx}.png" # 0-indexed file naming rule
+  normalization: "minmax"
+  roi: null # e.g., [10, 10, 246, 246] for [y_start, x_start, y_end, x_end]
+  num_workers: 4
+
+model:
+  kan_layers: [12, 64, 64, 1] # Input: 4 wavelengths * 3 buckets = 12 channels
+  grid_size: 5
+  spline_order: 3
+  wavelengths: [450.0, 532.0, 632.8, 780.0] # Wavelengths in nm for physics loss
+
+training:
+  batch_size: 4096
+  epochs: 50
+  learning_rate: 0.001
+  scheduler:
+    type: "StepLR"
+    step_size: 20
+    gamma: 0.1
+  loss_weights:
+    mse: 1.0
+    physics: 0.1 # Weight for the physics-informed loss
+
+output:
+  log_dir: "outputs/logs"
+  model_dir: "outputs/models"

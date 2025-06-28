@@ -1,4 +1,4 @@
-# Process View - PIKANs 3파장 4-bucket 간섭계 높이 복원
+# Process View - PIKANs 간섭계 높이 복원
 
 ## 데이터 처리 흐름
 
