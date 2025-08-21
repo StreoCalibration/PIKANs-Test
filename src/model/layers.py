@@ -69,12 +69,19 @@ class KANLayer(nn.Module):
             den1 = knots[:, :, k:-1] - knots[:, :, :-k-1]
             den2 = knots[:, :, k+1:] - knots[:, :, 1:-k]
             
-            # Avoid division by zero
-            den1[den1 == 0] = 1.0
-            den2[den2 == 0] = 1.0
+            # Cox-de Boor recursion convention: if the denominator is zero, the term is zero.
+            # We handle this by calculating the terms and then zeroing out the ones where the denominator was zero.
+            with torch.no_grad():
+                den1_is_zero = (den1 == 0)
+                den2_is_zero = (den2 == 0)
+
+            # Add a small epsilon to avoid division by zero warnings, then correct the values.
+            term1 = (x - knots[:, :, :-k-1]) / (den1 + 1e-8) * basis[:, :, :-1]
+            term2 = (knots[:, :, k+1:] - x) / (den2 + 1e-8) * basis[:, :, 1:]
+
+            term1[den1_is_zero] = 0.0
+            term2[den2_is_zero] = 0.0
             
-            term1 = (x - knots[:, :, :-k-1]) / den1 * basis[:, :, :-1]
-            term2 = (knots[:, :, k+1:] - x) / den2 * basis[:, :, 1:]
             basis = term1 + term2
             
         return basis
