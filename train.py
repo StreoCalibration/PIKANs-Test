@@ -2,6 +2,7 @@ import argparse
 import yaml
 import os
 import torch
+import numpy as np
 from datetime import datetime
 from torch.utils.data import DataLoader
 from tqdm import tqdm
@@ -58,11 +59,16 @@ def train(config):
 
     # 3. Loss Function and Optimizer
     print("\n3. Setting up loss function and optimizer...")
+    num_buckets = config['data']['layout']['num_buckets']
+    # Workaround for potential torch.linspace issue
+    phase_shifts = torch.arange(0, num_buckets) * (2 * np.pi / num_buckets)
+
     criterion_mse = torch.nn.MSELoss()
     criterion_physics = PhysicsInformedLoss(
         wavelengths=config['model']['wavelengths'],
         num_wavelengths=config['data']['layout']['num_wavelengths'],
-        num_buckets=config['data']['layout']['num_buckets']
+        num_buckets=num_buckets,
+        phase_shifts=phase_shifts
     ).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=config['training']['learning_rate'])
     

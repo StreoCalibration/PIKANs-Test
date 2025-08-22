@@ -1,15 +1,21 @@
+"""
+Custom KAN layer implementation using B-splines.
+"""
 import torch
-import torch.nn as nn
+from torch import nn, Tensor
 import torch.nn.functional as F
+
 
 class KANLayer(nn.Module):
     """
     KAN Layer implementation based on B-splines.
     Each connection between an input and output neuron is represented by a
-    learnable activation function, which is a sum of a base function and a spline function.
+    learnable activation function, which is a sum of a base function and a
+    spline function.
     """
-    def __init__(self, in_features, out_features, grid_size=5, spline_order=3, base_activation=nn.SiLU):
-        super(KANLayer, self).__init__()
+    def __init__(self, in_features: int, out_features: int, grid_size=5,
+                 spline_order=3, base_activation=nn.SiLU):
+        super().__init__()
         self.in_features = in_features
         self.out_features = out_features
         self.grid_size = grid_size
@@ -21,9 +27,11 @@ class KANLayer(nn.Module):
         self.register_buffer('grid', grid_range.unsqueeze(0).repeat(in_features, 1))
         # self.grid shape: (in_features, grid_size + 1)
 
-        # Learnable spline coefficients. Number of basis functions = grid_size + spline_order.
+        # Learnable spline coefficients.
         num_basis = grid_size + spline_order
-        self.spline_coeffs = nn.Parameter(torch.empty(out_features, in_features, num_basis))
+        self.spline_coeffs = nn.Parameter(
+            torch.empty(out_features, in_features, num_basis)
+        )
         nn.init.xavier_uniform_(self.spline_coeffs)
 
         # Learnable weights for the base and spline functions to scale them.
@@ -35,16 +43,17 @@ class KANLayer(nn.Module):
         # Base activation function
         self.base_activation = base_activation()
 
-    def b_spline_basis(self, x):
+    def b_spline_basis(self, x: Tensor) -> Tensor:
         """
         Computes the B-spline basis function values for the given input x.
         Uses the Cox-de Boor recursion formula in a vectorized manner.
-        
+
         Args:
-            x (torch.Tensor): Input tensor of shape (batch_size, in_features).
-        
+            x (Tensor): Input tensor of shape (batch_size, in_features).
+
         Returns:
-            torch.Tensor: B-spline basis values of shape (batch_size, in_features, num_basis).
+            Tensor: B-spline basis values of shape
+                    (batch_size, in_features, num_basis).
         """
         # Ensure grid and x have correct shapes for broadcasting
         grid = self.grid.unsqueeze(0)  # (1, in_features, grid_size + 1)
@@ -68,32 +77,50 @@ class KANLayer(nn.Module):
         for k in range(1, self.spline_order + 1):
             den1 = knots[:, :, k:-1] - knots[:, :, :-k-1]
             den2 = knots[:, :, k+1:] - knots[:, :, 1:-k]
-            
-            # Cox-de Boor recursion convention: if the denominator is zero, the term is zero.
-            # We handle this by calculating the terms and then zeroing out the ones where the denominator was zero.
-            with torch.no_grad():
-                den1_is_zero = (den1 == 0)
-                den2_is_zero = (den2 == 0)
 
-            # Add a small epsilon to avoid division by zero warnings, then correct the values.
-            term1 = (x - knots[:, :, :-k-1]) / (den1 + 1e-8) * basis[:, :, :-1]
-            term2 = (knots[:, :, k+1:] - x) / (den2 + 1e-8) * basis[:, :, 1:]
+            # Cox-de Boor recursion: if the denominator is zero, the term is zero.
+            # We use torch.where to handle division by zero safely.
 
-            term1[den1_is_zero] = 0.0
-            term2[den2_is_zero] = 0.0
-            
+            # Calculate term1
+            term1_num = x - knots[:, :, :-k-1]
+            term1 = torch.where(
+                den1 == 0,
+                torch.zeros_like(term1_num),
+                term1_num / den1 * basis[:, :, :-1]
+            )
+
+            # Calculate term2
+            term2_num = knots[:, :, k+1:] - x
+            term2 = torch.where(
+                den2 == 0,
+                torch.zeros_like(term2_num),
+                term2_num / den2 * basis[:, :, 1:]
+            )
             basis = term1 + term2
-            
+
         return basis
 
-    def forward(self, x):
+    def forward(self, x: Tensor) -> Tensor:
+        """
+        Defines the forward pass for the KANLayer.
+
+        Args:
+            x (Tensor): Input tensor of shape (batch_size, in_features).
+
+        Returns:
+            Tensor: Output tensor of shape (batch_size, out_features).
+        """
         # 1. Base function part: y_base_j = sum_i w_base_{j,i} * silu(x_i)
-        base_output = F.linear(self.base_activation(x), self.base_weight)
+        base_output = F.linear(self.base_activation(x), self.base_weight) # pylint: disable=not-callable
 
         # 2. Spline function part
         spline_basis = self.b_spline_basis(x)  # (batch, in_features, num_basis)
-        spline_activation = torch.einsum('bin,oin->boi', spline_basis, self.spline_coeffs)
-        spline_output = torch.einsum('boi,oi->bo', spline_activation, self.spline_scaler)
+        spline_activation = torch.einsum(
+            'bin,oin->boi', spline_basis, self.spline_coeffs
+        )
+        spline_output = torch.einsum(
+            'boi,oi->bo', spline_activation, self.spline_scaler
+        )
 
         # 3. Combine base and spline parts
         return base_output + spline_output

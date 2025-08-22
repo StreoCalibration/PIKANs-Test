@@ -1,6 +1,9 @@
-import torch
-import torch.nn as nn
+"""
+Core PIKANs model definition.
+"""
+from torch import nn, Tensor
 from .layers import KANLayer
+
 
 class PIKANs(nn.Module):
     """
@@ -9,9 +12,8 @@ class PIKANs(nn.Module):
     This model is composed of a sequence of KAN layers.
     """
     def __init__(self, layer_widths, grid_size=5, spline_order=3):
-        super(PIKANs, self).__init__()
-        
-        print("PIKANs model initialized with KAN layers.")
+        super().__init__()
+
         self.layers = nn.ModuleList()
         for i in range(len(layer_widths) - 1):
             in_features, out_features = layer_widths[i], layer_widths[i+1]
@@ -24,7 +26,16 @@ class PIKANs(nn.Module):
                 )
             )
 
-    def forward(self, x):
+    def forward(self, x: Tensor) -> Tensor:
+        """
+        Defines the forward pass for the PIKANs model.
+
+        Args:
+            x (Tensor): The input tensor.
+
+        Returns:
+            Tensor: The output tensor after passing through all KAN layers.
+        """
         for layer in self.layers:
             x = layer(x)
         return x
