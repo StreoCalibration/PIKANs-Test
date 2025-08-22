@@ -51,5 +51,63 @@ class TestKANLayer(unittest.TestCase):
         # The sum of basis functions should be 1 for any point within the grid.
         self.assertTrue(torch.allclose(torch.sum(basis_values, dim=-1), torch.tensor(1.0)))
 
+    def test_b_spline_basis_outside_grid(self):
+        """
+        Tests B-spline basis for inputs outside the defined grid.
+        The basis values should be zero for points outside the knot range.
+        """
+        layer = KANLayer(in_features=1, out_features=1, grid_size=5, spline_order=3)
+
+        # Test a point to the left of the grid
+        test_input_left = torch.tensor([[-2.0]])
+        basis_values_left = layer.b_spline_basis(test_input_left)
+        self.assertTrue(torch.all(basis_values_left == 0))
+
+        # Test a point to the right of the grid
+        test_input_right = torch.tensor([[2.0]])
+        basis_values_right = layer.b_spline_basis(test_input_right)
+        self.assertTrue(torch.all(basis_values_right == 0))
+
+    def test_different_grid_and_spline_order(self):
+        """
+        Tests the b_spline_basis function with a different grid size and spline order.
+        """
+        layer = KANLayer(in_features=1, out_features=1, grid_size=8, spline_order=2)
+        test_input = torch.rand(10, 1) * 2 - 1 # Random inputs in [-1, 1]
+
+        basis_values = layer.b_spline_basis(test_input)
+
+        # Check shape
+        self.assertEqual(basis_values.shape, (10, 1, 8 + 2))
+
+        # Check that the sum of basis functions is close to 1
+        self.assertTrue(torch.allclose(torch.sum(basis_values, dim=-1), torch.ones(10, 1)))
+
+    def test_gradient_flow(self):
+        """
+        Tests that gradients are flowing through the learnable parameters.
+        """
+        layer = KANLayer(in_features=4, out_features=2)
+        dummy_input = torch.randn(8, 4, requires_grad=True)
+
+        # Ensure all learnable parameters have requires_grad=True
+        self.assertTrue(layer.spline_coeffs.requires_grad)
+        self.assertTrue(layer.base_weight.requires_grad)
+        self.assertTrue(layer.spline_scaler.requires_grad)
+
+        output = layer(dummy_input)
+        loss = output.sum()
+        loss.backward()
+
+        # Check that gradients are not None
+        self.assertIsNotNone(layer.spline_coeffs.grad)
+        self.assertIsNotNone(layer.base_weight.grad)
+        self.assertIsNotNone(layer.spline_scaler.grad)
+
+        # Check that gradients are not all zero
+        self.assertNotEqual(torch.sum(layer.spline_coeffs.grad**2), 0)
+        self.assertNotEqual(torch.sum(layer.base_weight.grad**2), 0)
+        self.assertNotEqual(torch.sum(layer.spline_scaler.grad**2), 0)
+
 if __name__ == '__main__':
     unittest.main()
