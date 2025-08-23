@@ -6,7 +6,7 @@ import os
 import shutil
 import tempfile
 
-from src.data_loader.datasets import InterferometryDataset, load_inference_data
+from src.data_loader.datasets import InterferometryDataset, RealDataFinetuneDataset, load_inference_data
 from src.preprocessing.filters import select_roi
 
 class TestDataLoader(unittest.TestCase):
@@ -141,3 +141,77 @@ class TestDataLoader(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class TestRealDataFinetuneDataset(unittest.TestCase):
+    """
+    Test suite for the RealDataFinetuneDataset.
+    """
+
+    def setUp(self):
+        """
+        Set up a temporary directory with dummy data for testing (no GT).
+        """
+        self.temp_dir = tempfile.mkdtemp()
+        self.data_layout = {
+            'num_wavelengths': 2,
+            'num_buckets': 3,
+            'file_pattern': 'w{w_idx}_b{b_idx}.png'
+        }
+        # Create data WITHOUT ground truth
+        self._create_dummy_data(gt=False)
+
+    def tearDown(self):
+        """
+        Remove the temporary directory after tests are complete.
+        """
+        shutil.rmtree(self.temp_dir)
+
+    def _create_dummy_data(self, sample_name="sample_001", gt=False):
+        """Helper to create dummy data files."""
+        sample_path = os.path.join(self.temp_dir, sample_name)
+        raw_path = os.path.join(sample_path, "raw")
+        os.makedirs(raw_path, exist_ok=True)
+
+        if gt:
+            gt_path = os.path.join(sample_path, "gt")
+            os.makedirs(gt_path, exist_ok=True)
+            gt_data = np.random.rand(10, 12).astype(np.float32)
+            np.save(os.path.join(gt_path, "height.npy"), gt_data)
+
+        # Create dummy intensity images
+        for w in range(self.data_layout['num_wavelengths']):
+            for b in range(self.data_layout['num_buckets']):
+                img_shape = (10, 12)
+                img = np.random.randint(0, 256, size=img_shape, dtype=np.uint8)
+                filename = self.data_layout['file_pattern'].format(w_idx=w, b_idx=b)
+                cv2.imwrite(os.path.join(raw_path, filename), img)
+
+    def test_initialization_no_gt(self):
+        """
+        Tests that RealDataFinetuneDataset initializes correctly without a GT folder.
+        """
+        try:
+            dataset = RealDataFinetuneDataset(data_dir=self.temp_dir, data_layout=self.data_layout)
+            self.assertIsNotNone(dataset)
+            # 10x12 pixels = 120
+            self.assertEqual(len(dataset), 120)
+        except Exception as e:
+            self.fail(f"RealDataFinetuneDataset raised an exception unexpectedly: {e}")
+
+    def test_getitem_no_gt(self):
+        """
+        Tests that __getitem__ returns only a single tensor.
+        """
+        dataset = RealDataFinetuneDataset(data_dir=self.temp_dir, data_layout=self.data_layout)
+        item = dataset[0]
+
+        # Check that it returns a single item, not a tuple
+        self.assertNotIsInstance(item, tuple)
+
+        # Check the item is a tensor
+        self.assertIsInstance(item, torch.Tensor)
+
+        # Check the tensor's shape
+        expected_channels = self.data_layout['num_wavelengths'] * self.data_layout['num_buckets']
+        self.assertEqual(item.shape, (expected_channels,))

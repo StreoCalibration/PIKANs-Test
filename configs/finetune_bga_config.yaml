@@ -1,0 +1,46 @@
+# Configuration for Fine-tuning on Real BGA Data (Unsupervised)
+
+data:
+  # IMPORTANT: This path should point to the real measurement data.
+  path: "data/bga_synthetic"
+
+  # Data structure layout should match the real data's file naming
+  layout:
+    num_wavelengths: 4
+    num_buckets: 3
+    file_pattern: "w{w_idx}_b{b_idx}.png" # Or .bmp, .tif, etc.
+
+  normalization: "minmax"
+  roi: null
+  num_workers: 4
+
+model:
+  name: "PIKANs"
+  # Input: 4 wavelengths * 3 buckets = 12 channels
+  kan_layers: [12, 64, 64, 1]
+  grid_size: 5
+  spline_order: 3
+  wavelengths: [633.0, 532.0, 450.0, 780.0]
+
+training:
+  # IMPORTANT: Specify the path to the model pre-trained in Phase 1.
+  pretrained_model_path: "outputs/models/20250823_072229/final_model.pth"
+
+  epochs: 20 # Fine-tuning usually requires fewer epochs
+  batch_size: 2048
+  # Use a smaller learning rate for fine-tuning
+  learning_rate: 0.00001 # 1e-5
+  optimizer: "Adam"
+
+  # Scheduler is optional but can be helpful
+  scheduler:
+    type: "StepLR"
+    step_size: 10
+    gamma: 0.1
+
+  # The loss_weights section is not needed here, as the finetune.py
+  # script exclusively uses the PhysicsInformedLoss.
+
+output:
+  log_dir: "outputs/logs"
+  model_dir: "outputs/models"

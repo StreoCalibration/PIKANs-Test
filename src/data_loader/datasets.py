@@ -162,3 +162,87 @@ def load_inference_data(data_path, data_layout, normalization_method='minmax', r
     intensity_vectors = intensity_stack.reshape(-1, num_channels)
 
     return torch.from_numpy(intensity_vectors).float(), original_shape
+
+
+class RealDataFinetuneDataset(Dataset):
+    """
+    PyTorch Dataset for loading real interferometry data for unsupervised fine-tuning.
+    This dataset is similar to InterferometryDataset but does NOT load ground truth (GT) data.
+    It only loads the intensity images.
+    """
+    def __init__(self, data_dir, data_layout, roi=None, normalization_method='minmax'):
+        self.data_dir = data_dir
+        self.data_layout = data_layout
+        self.roi = roi
+        self.normalization_method = normalization_method
+        self.num_wavelengths = self.data_layout['num_wavelengths']
+        self.num_buckets = self.data_layout['num_buckets']
+
+        self.pixel_intensities = []
+        self._load_data()
+
+    def _load_data(self):
+        print("Loading and vectorizing real dataset for fine-tuning (no GT)...")
+        sample_dirs = sorted([d for d in os.listdir(self.data_dir) if os.path.isdir(os.path.join(self.data_dir, d))])
+
+        for sample_name in tqdm(sample_dirs, desc="Processing Samples"):
+            sample_path = os.path.join(self.data_dir, sample_name)
+
+            # This dataset does NOT look for GT files.
+            # It only loads the raw intensity images.
+            intensities = []
+            valid_sample = True
+            raw_data_path = os.path.join(sample_path, "raw")
+            file_pattern = self.data_layout['file_pattern']
+
+            for w in range(self.num_wavelengths):
+                for b in range(self.num_buckets):
+                    img_filename = file_pattern.format(w_idx=w, b_idx=b)
+                    img_path = os.path.join(raw_data_path, img_filename)
+                    if not os.path.exists(img_path):
+                        print(f"Warning: Image {img_path} not found for sample {sample_name}. Skipping sample.")
+                        valid_sample = False
+                        break
+
+                    img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
+                    if img is None:
+                        print(f"Warning: Could not read image {img_path}. Skipping sample.")
+                        valid_sample = False
+                        break
+
+                    intensities.append(img)
+                if not valid_sample:
+                    break
+
+            if not valid_sample:
+                continue
+
+            # --- Preprocessing ---
+            if self.roi:
+                intensities = [select_roi(img, self.roi) for img in intensities]
+
+            if self.normalization_method:
+                intensities = [normalize_intensity(img.astype(np.float32), self.normalization_method) for img in intensities]
+
+            # --- Stack and Vectorize ---
+            num_channels = self.num_wavelengths * self.num_buckets
+            intensity_stack = np.stack(intensities, axis=-1)
+            num_pixels = intensity_stack.shape[0] * intensity_stack.shape[1]
+            intensity_vectors = intensity_stack.reshape(num_pixels, num_channels)
+
+            self.pixel_intensities.append(intensity_vectors)
+
+        if not self.pixel_intensities:
+            raise RuntimeError("No valid data was loaded. Check data paths and file structure.")
+
+        self.pixel_intensities = np.concatenate(self.pixel_intensities, axis=0)
+
+        print(f"Dataset loaded successfully. Total pixels: {len(self.pixel_intensities)}")
+
+    def __len__(self):
+        return len(self.pixel_intensities)
+
+    def __getitem__(self, idx):
+        # Returns only the intensity vector, no ground truth.
+        intensity_vector = self.pixel_intensities[idx]
+        return torch.from_numpy(intensity_vector).float()
